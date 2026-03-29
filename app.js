@@ -41,12 +41,22 @@ async function init() {
 async function startWebcam() {
     if (navigator.mediaDevices.getUserMedia) {
         try {
+            // First attempt: try to get the back camera (environment)
             currentStream = await navigator.mediaDevices.getUserMedia({ 
                 video: { facingMode: 'environment' } 
             });
             webcamElement.srcObject = currentStream;
         } catch (err) {
-            console.error('相機啟動錯誤:', err);
+            console.warn('無法開啟後置鏡頭，嘗試開啟預設鏡頭...', err);
+            try {
+                // Secondary attempt: get any available camera (works on desktop)
+                currentStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: true 
+                });
+                webcamElement.srcObject = currentStream;
+            } catch (err2) {
+                console.error('所有相機啟動均失敗:', err2);
+            }
         }
     }
 }
