@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智慧藥箱小幫手 - 讓視線更清晰，用藥更安全</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header Section -->
+        <header class="app-header">
+            <h1>智慧藥箱小幫手</h1>
+            <p class="subtitle">照護家人的用藥安全</p>
+        </header>
+
+        <!-- Main Interaction Area -->
+        <main class="main-content">
+            <!-- Camera/Preview Area -->
+            <div id="camera-container" class="camera-container">
+                <video id="webcam" autoplay playsinline muted></video>
+                <div id="scanner-line" class="scanner-line"></div>
+                <div id="loading-overlay" class="overlay hidden">
+                    <div class="spinner"></div>
+                    <p>正在辨識中...</p>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="action-bar">
+                <button id="scan-btn" class="big-btn primary-btn">
+                    <span class="btn-icon">📸</span>
+                    <span class="btn-text">拍照辨識</span>
+                </button>
+                <button id="replay-btn" class="big-btn secondary-btn hidden">
+                    <span class="btn-icon">🔊</span>
+                    <span class="btn-text">語音重播</span>
+                </button>
+            </div>
+
+            <!-- Result Display -->
+            <div id="result-card" class="result-card hidden">
+                <div class="card-header">
+                    <h2 id="med-name">藥名載入中...</h2>
+                    <span id="med-category" class="tag">類別</span>
+                </div>
+                <div class="card-content">
+                    <div class="info-section instruction-highlight">
+                        <h3>💡 服用方法</h3>
+                        <p id="med-instructions">—</p>
+                    </div>
+                    <div class="info-section">
+                        <h3>⏰ 建議用法</h3>
+                        <p id="med-dosage">—</p>
+                    </div>
+                    <div class="info-section warning-box">
+                        <h3>⚠️ 特別注意</h3>
+                        <p id="med-warnings">—</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Interaction Alerts (Hidden by default) -->
+            <div id="safety-alert" class="safety-alert hidden">
+                <h3>🚨 藥物併用警告</h3>
+                <p id="alert-msg">偵測到可能發生效應的藥物組合，請諮詢醫師。</p>
+            </div>
+        </main>
+
+        <!-- Footer Footer -->
+        <footer class="app-footer">
+            <p>© 2026 AI 照護專題版權所有</p>
+        </footer>
+    </div>
+
+    <!-- Scripts -->
+    <script src="app.js"></script>
+</body>
+</html>

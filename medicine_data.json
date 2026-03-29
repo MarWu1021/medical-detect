@@ -1,0 +1,32 @@
+[
+  {
+    "id": "paracetamol",
+    "name": "普拿疼 (Paracetamol)",
+    "category": "止痛藥",
+    "instructions": "飯後服用，每次一錠。",
+    "dosage": "每 4-6 小時一次，每天不超過 4 次。",
+    "warnings": "不可與酒精併用，以免傷肝。",
+    "interactions": ["warfarin"],
+    "voice_msg": "這是普拿疼，主要用於止痛退燒。請在餐後服用，記得今天不要喝酒喔。"
+  },
+  {
+    "id": "vitamin_c",
+    "name": "維他命 C (Vitamin C)",
+    "category": "營養補充品",
+    "instructions": "飯後服用。",
+    "dosage": "每天一錠。",
+    "warnings": "多食無益。",
+    "interactions": [],
+    "voice_msg": "這是維他命 C，請在飯後服用。一天一顆就可以了。"
+  },
+  {
+    "id": "aspirin",
+    "name": "阿斯匹靈 (Aspirin)",
+    "category": "抗凝血劑",
+    "instructions": "飯後隨水服用。",
+    "dosage": "請遵照醫囑服用。",
+    "warnings": "可能增加出血風險，手術前請告知醫師。",
+    "interactions": ["warfarin", "ibuprofen"],
+    "voice_msg": "這是阿斯匹靈，請飯後配水服用。如果您最近要看牙醫或做手術，一定要告訴醫生您有在吃這個藥。"
+  }
+]
