@@ -1,9 +1,7 @@
 /**
  * Medication AI Assistant - app.js
- * Senior-friendly interaction logic with Google Gemini API Integration (Official SDK)
+ * Senior-friendly interaction logic with Google Gemini API Integration
  */
-
-import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
 
 const webcamElement = document.getElementById('webcam');
 const scanBtn = document.getElementById('scan-btn');
@@ -71,6 +69,9 @@ async function startWebcam() {
                 video: { facingMode: 'environment' } 
             });
             webcamElement.srcObject = currentStream;
+            // Needed for iOS Safari inline playback
+            webcamElement.setAttribute('playsinline', '');
+            webcamElement.play();
         } catch (err) {
             console.warn('無法開啟後置鏡頭，嘗試開啟預設鏡頭...', err);
             try {
@@ -78,6 +79,8 @@ async function startWebcam() {
                     video: true 
                 });
                 webcamElement.srcObject = currentStream;
+                webcamElement.setAttribute('playsinline', '');
+                webcamElement.play();
             } catch (err2) {
                 console.error('所有相機啟動均失敗:', err2);
             }
@@ -87,56 +90,64 @@ async function startWebcam() {
 
 // 3. Capture Image from Video
 function captureBase64Image() {
-    // Set canvas dimensions to match video stream
-    canvas.width = webcamElement.videoWidth;
-    canvas.height = webcamElement.videoHeight;
-    // Draw current frame to canvas
+    canvas.width = webcamElement.videoWidth || 640;
+    canvas.height = webcamElement.videoHeight || 480;
     ctx.drawImage(webcamElement, 0, 0, canvas.width, canvas.height);
-    // Convert to base64 jpeg
     const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-    // Strip the "data:image/jpeg;base64," prefix
     return dataUrl.split(',')[1];
 }
 
 // 4. API Call to Gemini
 async function analyzeWithGemini(base64Image) {
-    const prompt = `請辨識這張圖片中的包裝盒或物品。
-如果你沒有看到任何像是藥盒、藥瓶或保健食品的東西，請嚴格回覆字串："NO_MEDICINE"。
-如果確定有，請根據包裝上的文字，回覆一段 JSON 格式的文字，包含以下欄位：
+    // DEBUG PROMPT: Force AI to describe the image instead of rejecting it.
+    const prompt = `請詳細描述這張圖片裡有什麼？無論你看到什麼（就算是全黑、或是只有臉、或是模糊不清），都請用以下 JSON 格式回傳，不要加上其他任何文字，也不要回傳 NO_MEDICINE：
 {
-  "name": "物品名稱 (例如：普拿疼伏冒加強錠)",
-  "category": "類別",
-  "instructions": "包裝上寫的用途或使用說明",
-  "dosage": "包裝上寫的用法用量",
-  "warnings": "包裝上的注意事項",
-  "voice_msg": "一段友善的語音提示文字，大約30字。"
-}
-請只回傳 JSON 格式本身，不要加上任何其他說明文字。`;
+  "name": "請詳細描述你看到的畫面 (例如: 我看到一盒普拿疼、我看到一張全黑的圖、我看到一個人臉)",
+  "category": "測試用類別",
+  "instructions": "測試",
+  "dosage": "測試",
+  "warnings": "無",
+  "voice_msg": "除錯模式執行中"
+}`;
 
-    // Use the official SDK
-    const genAI = new GoogleGenerativeAI(geminiApiKey);
-    // Use gemini-1.5-flash as recommended by Google for multimodal
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-    const imageParts = [
-      {
-        inlineData: {
-          data: base64Image,
-          mimeType: "image/jpeg"
+    const payload = {
+        contents: [{
+            parts: [
+                { text: prompt },
+                {
+                    inlineData: {
+                        mimeType: "image/jpeg",
+                        data: base64Image
+                    }
+                }
+            ]
+        }],
+        generationConfig: {
+            temperature: 0.1,
         }
-      }
-    ];
+    };
 
-    const result = await model.generateContent([prompt, ...imageParts]);
-    const response = await result.response;
-    let text = response.text().trim();
-    
-    // Check if Gemini blocked it due to safety
-    if (!text) {
-        throw new Error("AI 回傳了空白內容，可能被安全機制阻擋。");
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`API 錯誤碼 ${response.status}: ${errText}`);
     }
 
-    // Robust JSON extraction using regex
+    const data = await response.json();
+    
+    if (!data.candidates || data.candidates.length === 0 || !data.candidates[0].content) {
+        throw new Error("AI 拒絕回答或被安全機制阻擋：" + JSON.stringify(data));
+    }
+
+    let text = data.candidates[0].content.parts[0].text.trim();
+    
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
         text = jsonMatch[0];
@@ -152,11 +163,8 @@ async function handleScan() {
         return;
     }
 
-    // Show loading UI
     loadingOverlay.classList.remove('hidden');
     scanBtn.disabled = true;
-    
-    // Hide previous results
     resultCard.classList.add('hidden');
     errorCard.classList.add('hidden');
 
@@ -172,13 +180,13 @@ async function handleScan() {
                 displayResult(medData);
             } catch (parseErr) {
                 console.error("JSON 解析失敗", aiResponse);
-                alert("AI 回傳的格式有誤：\n" + aiResponse.substring(0, 100)); // Show to user for debugging
+                alert("AI 回傳的格式有誤：\n" + aiResponse.substring(0, 100));
                 showError();
             }
         }
     } catch (err) {
         console.error("辨識過程中發生錯誤:", err);
-        alert("發生錯誤：\n" + err.message); // Pop up the actual error on the phone
+        alert("發生錯誤：\n" + err.message);
         showError();
     } finally {
         loadingOverlay.classList.add('hidden');
@@ -202,11 +210,9 @@ function displayResult(med) {
 
     resultCard.classList.remove('hidden');
     
-    // Appending a disclaimer since AI might hallucinate
     const disclaimer = " (詳細用藥請依醫師或藥師指示為準)";
     medWarnings.textContent += disclaimer;
 
-    // Automatic Voice Feedback
     speak(med.voice_msg || `${med.name}。服用方法：${med.instructions}。注意：${med.warnings}`);
 }
 
@@ -214,12 +220,10 @@ function displayResult(med) {
 function speak(text) {
     if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
-        
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = 'zh-TW';
         utterance.rate = 0.9; 
         utterance.pitch = 1.0;
-        
         window.speechSynthesis.speak(utterance);
     }
 }
@@ -228,13 +232,10 @@ function speak(text) {
 scanBtn.addEventListener('click', handleScan);
 
 replayBtn.addEventListener('click', () => {
-    // If error card is shown, replay error message
     if (!errorCard.classList.contains('hidden')) {
         speak('未偵測到藥物，或是畫面不清楚，請重新拍攝。');
         return;
     }
-    
-    // To replay, we construct the message from the UI since we don't store the AI response globally
     const textToSpeak = `${medName.textContent}。服用方法：${medInstructions.textContent}。注意：${medWarnings.textContent}`;
     speak(textToSpeak);
 });
