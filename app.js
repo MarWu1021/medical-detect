@@ -34,7 +34,7 @@ async function init() {
     console.log('正在初始化 App...');
     try {
         // Check if there is a saved API key
-        const savedKey = localStorage.getItem('geminiApiKey') || 'AIzaSyDmXzUEWfYyHtHDx1BA7dk_-vySN-e-N2A';
+        const savedKey = localStorage.getItem('geminiApiKey');
         if (savedKey) {
             apiKeyInput.value = savedKey;
             geminiApiKey = savedKey;
