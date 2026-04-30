@@ -98,18 +98,18 @@ function captureBase64Image() {
 
 // 4. API Call to Gemini
 async function analyzeWithGemini(base64Image) {
-    const prompt = `你是一個專業的藥師助手。請辨識這張圖片中的藥物。
-如果你沒有看到任何藥物（例如只是人臉、空白背景、或非藥物的一般物品），請嚴格回覆字串："NO_MEDICINE"。
-如果確定有藥物，請回覆一段 JSON 格式的文字，包含以下欄位：
+    const prompt = `請辨識這張圖片中的包裝盒或物品。
+如果你沒有看到任何像是藥盒、藥瓶或保健食品的東西，請嚴格回覆字串："NO_MEDICINE"。
+如果確定有，請根據包裝上的文字，回覆一段 JSON 格式的文字，包含以下欄位：
 {
-  "name": "藥物名稱 (中文)",
-  "category": "藥物類別 (例如：止痛藥、眼藥水、感冒藥)",
-  "instructions": "如何使用或服用方式",
-  "dosage": "建議劑量或頻率",
-  "warnings": "特別注意事項或副作用",
-  "voice_msg": "一段友善的語音提示文字，用口語化的中文告訴長輩這個藥要怎麼吃，大約30字以內。"
+  "name": "物品名稱 (例如：普拿疼伏冒加強錠)",
+  "category": "類別",
+  "instructions": "包裝上寫的用途或使用說明",
+  "dosage": "包裝上寫的用法用量",
+  "warnings": "包裝上的注意事項",
+  "voice_msg": "一段友善的語音提示文字，大約30字。"
 }
-請只回傳 JSON 格式本身，不要加上 \`\`\`json 標記或任何其他說明文字。`;
+請只回傳 JSON 格式本身，不要加上任何其他說明文字。`;
 
     const payload = {
         contents: [{
@@ -137,17 +137,23 @@ async function analyzeWithGemini(base64Image) {
     });
 
     if (!response.ok) {
-        throw new Error(`API Error: ${response.status}`);
+        const errText = await response.text();
+        throw new Error(`API 錯誤碼 ${response.status}: ${errText}`);
     }
 
     const data = await response.json();
+    
+    // Check if Gemini blocked it due to safety
+    if (!data.candidates || data.candidates.length === 0 || !data.candidates[0].content) {
+        throw new Error("AI 拒絕回答或被安全機制阻擋：" + JSON.stringify(data));
+    }
+
     let text = data.candidates[0].content.parts[0].text.trim();
     
-    // Clean up potential markdown formatting
-    if (text.startsWith('```json')) {
-        text = text.replace(/```json/g, '').replace(/```/g, '').trim();
-    } else if (text.startsWith('```')) {
-        text = text.replace(/```/g, '').trim();
+    // Robust JSON extraction using regex
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+        text = jsonMatch[0];
     }
 
     return text;
@@ -180,11 +186,13 @@ async function handleScan() {
                 displayResult(medData);
             } catch (parseErr) {
                 console.error("JSON 解析失敗", aiResponse);
+                alert("AI 回傳的格式有誤：\n" + aiResponse.substring(0, 100)); // Show to user for debugging
                 showError();
             }
         }
     } catch (err) {
         console.error("辨識過程中發生錯誤:", err);
+        alert("發生錯誤：\n" + err.message); // Pop up the actual error on the phone
         showError();
     } finally {
         loadingOverlay.classList.add('hidden');
