@@ -62,12 +62,32 @@
                 </div>
             </div>
 
+            <!-- Error Display (Hidden by default) -->
+            <div id="error-card" class="result-card error-card hidden">
+                <div class="card-header error-header">
+                    <h2>⚠️ 辨識失敗</h2>
+                </div>
+                <div class="card-content">
+                    <p class="error-msg">未偵測到藥物，或是畫面不清楚。</p>
+                    <p class="error-sub">請確保藥物包裝完整出現在鏡頭內，並保持光線明亮後再試一次。</p>
+                </div>
+            </div>
+
             <!-- Interaction Alerts (Hidden by default) -->
             <div id="safety-alert" class="safety-alert hidden">
                 <h3>🚨 藥物併用警告</h3>
                 <p id="alert-msg">偵測到可能發生效應的藥物組合，請諮詢醫師。</p>
             </div>
         </main>
+
+        <!-- Settings Panel -->
+        <div class="settings-panel">
+            <h3>⚙️ AI 模型設定 (開發者專用)</h3>
+            <p>請貼上您的 Google Gemini API Key：</p>
+            <input type="password" id="api-key-input" placeholder="AIzaSy..." value="AIzaSyDmXzUEWfYyHtHDx1BA7dk_-vySN-e-N2A" />
+            <button id="save-key-btn" class="small-btn">儲存金鑰</button>
+            <p id="api-status" class="model-status">尚未設定 API Key，目前使用模擬模式</p>
+        </div>
 
         <!-- Footer Footer -->
         <footer class="app-footer">

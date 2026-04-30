@@ -244,3 +244,75 @@ body {
     .big-btn { font-size: 1.4rem; padding: 20px; }
     #med-name { font-size: 1.4rem; }
 }
+
+/* Error Card Specific Styles */
+.error-card {
+    border: 4px solid var(--warning);
+}
+
+.error-header h2 {
+    color: var(--warning);
+    font-size: 1.8rem;
+}
+
+.error-msg {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-dark);
+    margin-bottom: 10px;
+}
+
+.error-sub {
+    font-size: 1.2rem;
+    color: #64748b;
+}
+
+/* Settings Panel */
+.settings-panel {
+    background: #e2e8f0;
+    padding: 20px;
+    border-radius: 12px;
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+.settings-panel h3 {
+    font-size: 1.2rem;
+    color: #334155;
+    margin-bottom: 10px;
+}
+
+.settings-panel p {
+    margin-bottom: 10px;
+    font-size: 1rem;
+}
+
+.settings-panel input {
+    width: 100%;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    margin-bottom: 10px;
+    font-size: 1rem;
+}
+
+.small-btn {
+    background-color: #334155;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.small-btn:hover {
+    background-color: #475569;
+}
+
+.model-status {
+    margin-top: 10px;
+    font-size: 0.95rem;
+    font-weight: bold;
+}
+

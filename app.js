@@ -1,6 +1,6 @@
 /**
  * Medication AI Assistant - app.js
- * Senior-friendly interaction logic
+ * Senior-friendly interaction logic with Google Gemini API Integration
  */
 
 const webcamElement = document.getElementById('webcam');
@@ -8,7 +8,7 @@ const scanBtn = document.getElementById('scan-btn');
 const replayBtn = document.getElementById('replay-btn');
 const loadingOverlay = document.getElementById('loading-overlay');
 const resultCard = document.getElementById('result-card');
-const safetyAlert = document.getElementById('safety-alert');
+const errorCard = document.getElementById('error-card');
 
 // DOM Result Elements
 const medName = document.getElementById('med-name');
@@ -17,17 +17,31 @@ const medInstructions = document.getElementById('med-instructions');
 const medDosage = document.getElementById('med-dosage');
 const medWarnings = document.getElementById('med-warnings');
 
-let medicineData = [];
-let scannedMedicines = new Set();
+// Settings Elements
+const apiKeyInput = document.getElementById('api-key-input');
+const saveKeyBtn = document.getElementById('save-key-btn');
+const apiStatus = document.getElementById('api-status');
+
 let currentStream = null;
+let geminiApiKey = null;
+
+// Use an offscreen canvas to capture image
+const canvas = document.createElement('canvas');
+const ctx = canvas.getContext('2d');
 
 // 1. Initialize App
 async function init() {
     console.log('正在初始化 App...');
     try {
-        // Load Medicine Data
-        const response = await fetch('medicine_data.json');
-        medicineData = await response.json();
+        // Check if there is a saved API key
+        const savedKey = localStorage.getItem('geminiApiKey') || 'AIzaSyDmXzUEWfYyHtHDx1BA7dk_-vySN-e-N2A';
+        if (savedKey) {
+            apiKeyInput.value = savedKey;
+            geminiApiKey = savedKey;
+            updateApiStatus(true);
+        } else {
+            updateApiStatus(false);
+        }
         
         // Start Webcam
         await startWebcam();
@@ -37,11 +51,20 @@ async function init() {
     }
 }
 
+function updateApiStatus(hasKey) {
+    if (hasKey) {
+        apiStatus.textContent = "✅ API Key 已設定！啟用強大雲端 AI。";
+        apiStatus.style.color = "var(--secondary)";
+    } else {
+        apiStatus.textContent = "❌ 尚未設定 API Key，請輸入後儲存。";
+        apiStatus.style.color = "var(--warning)";
+    }
+}
+
 // 2. Camera Handling
 async function startWebcam() {
     if (navigator.mediaDevices.getUserMedia) {
         try {
-            // First attempt: try to get the back camera (environment)
             currentStream = await navigator.mediaDevices.getUserMedia({ 
                 video: { facingMode: 'environment' } 
             });
@@ -49,7 +72,6 @@ async function startWebcam() {
         } catch (err) {
             console.warn('無法開啟後置鏡頭，嘗試開啟預設鏡頭...', err);
             try {
-                // Secondary attempt: get any available camera (works on desktop)
                 currentStream = await navigator.mediaDevices.getUserMedia({ 
                     video: true 
                 });
@@ -61,28 +83,122 @@ async function startWebcam() {
     }
 }
 
-// 3. Mock Recognition Logic
+// 3. Capture Image from Video
+function captureBase64Image() {
+    // Set canvas dimensions to match video stream
+    canvas.width = webcamElement.videoWidth;
+    canvas.height = webcamElement.videoHeight;
+    // Draw current frame to canvas
+    ctx.drawImage(webcamElement, 0, 0, canvas.width, canvas.height);
+    // Convert to base64 jpeg
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+    // Strip the "data:image/jpeg;base64," prefix
+    return dataUrl.split(',')[1];
+}
+
+// 4. API Call to Gemini
+async function analyzeWithGemini(base64Image) {
+    const prompt = `你是一個專業的藥師助手。請辨識這張圖片中的藥物。
+如果你沒有看到任何藥物（例如只是人臉、空白背景、或非藥物的一般物品），請嚴格回覆字串："NO_MEDICINE"。
+如果確定有藥物，請回覆一段 JSON 格式的文字，包含以下欄位：
+{
+  "name": "藥物名稱 (中文)",
+  "category": "藥物類別 (例如：止痛藥、眼藥水、感冒藥)",
+  "instructions": "如何使用或服用方式",
+  "dosage": "建議劑量或頻率",
+  "warnings": "特別注意事項或副作用",
+  "voice_msg": "一段友善的語音提示文字，用口語化的中文告訴長輩這個藥要怎麼吃，大約30字以內。"
+}
+請只回傳 JSON 格式本身，不要加上 \`\`\`json 標記或任何其他說明文字。`;
+
+    const payload = {
+        contents: [{
+            parts: [
+                { text: prompt },
+                {
+                    inlineData: {
+                        mimeType: "image/jpeg",
+                        data: base64Image
+                    }
+                }
+            ]
+        }],
+        generationConfig: {
+            temperature: 0.1, // Keep it deterministic
+        }
+    };
+
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+        throw new Error(`API Error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    let text = data.candidates[0].content.parts[0].text.trim();
+    
+    // Clean up potential markdown formatting
+    if (text.startsWith('```json')) {
+        text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    } else if (text.startsWith('```')) {
+        text = text.replace(/```/g, '').trim();
+    }
+
+    return text;
+}
+
+// 5. Recognition Logic
 async function handleScan() {
+    if (!geminiApiKey) {
+        alert("請先在下方輸入並儲存 Google Gemini API Key！");
+        return;
+    }
+
     // Show loading UI
     loadingOverlay.classList.remove('hidden');
     scanBtn.disabled = true;
+    
+    // Hide previous results
+    resultCard.classList.add('hidden');
+    errorCard.classList.add('hidden');
 
-    // Simulate AI processing time (2 seconds)
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    try {
+        const base64Img = captureBase64Image();
+        const aiResponse = await analyzeWithGemini(base64Img);
 
-    // For demonstration, we pick a random medicine or cycle through them
-    const randomIndex = Math.floor(Math.random() * medicineData.length);
-    const selectedMed = medicineData[randomIndex];
-
-    displayResult(selectedMed);
-    checkInteractions(selectedMed);
-
-    loadingOverlay.classList.add('hidden');
-    scanBtn.disabled = false;
-    replayBtn.classList.remove('hidden');
+        if (aiResponse.includes('NO_MEDICINE')) {
+            showError();
+        } else {
+            try {
+                const medData = JSON.parse(aiResponse);
+                displayResult(medData);
+            } catch (parseErr) {
+                console.error("JSON 解析失敗", aiResponse);
+                showError();
+            }
+        }
+    } catch (err) {
+        console.error("辨識過程中發生錯誤:", err);
+        showError();
+    } finally {
+        loadingOverlay.classList.add('hidden');
+        scanBtn.disabled = false;
+        replayBtn.classList.remove('hidden');
+    }
 }
 
-// 4. Update UI with results
+function showError() {
+    errorCard.classList.remove('hidden');
+    speak('未偵測到藥物，或是畫面不清楚，請重新拍攝。');
+}
+
+// 6. Update UI with results
 function displayResult(med) {
     medName.textContent = med.name;
     medCategory.textContent = med.category;
@@ -92,41 +208,22 @@ function displayResult(med) {
 
     resultCard.classList.remove('hidden');
     
+    // Appending a disclaimer since AI might hallucinate
+    const disclaimer = " (詳細用藥請依醫師或藥師指示為準)";
+    medWarnings.textContent += disclaimer;
+
     // Automatic Voice Feedback
     speak(med.voice_msg || `${med.name}。服用方法：${med.instructions}。注意：${med.warnings}`);
 }
 
-// 5. Interaction Safety Check
-function checkInteractions(newMed) {
-    scannedMedicines.add(newMed.id);
-    
-    let overlaps = [];
-    medicineData.forEach(med => {
-        if (scannedMedicines.has(med.id) && med.id !== newMed.id) {
-            // Check if the new medicine has an interaction with this one
-            if (newMed.interactions.includes(med.id)) {
-                overlaps.push(med.name);
-            }
-        }
-    });
-
-    if (overlaps.length > 0) {
-        const msg = `🚨 注意！偵測到可能產生副作用的組合：${newMed.name} 不宜與 ${overlaps.join('、')} 同時服用。請務必諮詢醫師！`;
-        document.getElementById('alert-msg').textContent = msg;
-        safetyAlert.classList.remove('hidden');
-        speak(msg);
-    }
-}
-
-// 6. Voice Synthesis (TTS)
+// 7. Voice Synthesis (TTS)
 function speak(text) {
     if ('speechSynthesis' in window) {
-        // Cancel any ongoing speech
         window.speechSynthesis.cancel();
         
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = 'zh-TW';
-        utterance.rate = 0.9; // Slightly slower for seniors
+        utterance.rate = 0.9; 
         utterance.pitch = 1.0;
         
         window.speechSynthesis.speak(utterance);
@@ -135,10 +232,31 @@ function speak(text) {
 
 // Event Listeners
 scanBtn.addEventListener('click', handleScan);
+
 replayBtn.addEventListener('click', () => {
-    const activeName = medName.textContent;
-    const med = medicineData.find(m => m.name === activeName);
-    if (med) speak(med.voice_msg);
+    // If error card is shown, replay error message
+    if (!errorCard.classList.contains('hidden')) {
+        speak('未偵測到藥物，或是畫面不清楚，請重新拍攝。');
+        return;
+    }
+    
+    // To replay, we construct the message from the UI since we don't store the AI response globally
+    const textToSpeak = `${medName.textContent}。服用方法：${medInstructions.textContent}。注意：${medWarnings.textContent}`;
+    speak(textToSpeak);
+});
+
+saveKeyBtn.addEventListener('click', () => {
+    const key = apiKeyInput.value.trim();
+    if (key) {
+        geminiApiKey = key;
+        localStorage.setItem('geminiApiKey', key);
+        updateApiStatus(true);
+        alert("API Key 儲存成功！");
+    } else {
+        localStorage.removeItem('geminiApiKey');
+        geminiApiKey = null;
+        updateApiStatus(false);
+    }
 });
 
 // Run Init
