@@ -173,30 +173,41 @@ async function handleScan() {
         const aiResponse = await analyzeWithGemini(base64Img);
 
         if (aiResponse.includes('NO_MEDICINE')) {
-            showError();
+            showError("AI 回傳了 NO_MEDICINE");
         } else {
             try {
                 const medData = JSON.parse(aiResponse);
                 displayResult(medData);
             } catch (parseErr) {
                 console.error("JSON 解析失敗", aiResponse);
-                alert("AI 回傳的格式有誤：\n" + aiResponse.substring(0, 100));
-                showError();
+                showError("AI 回傳的格式有誤：" + aiResponse.substring(0, 100));
             }
         }
     } catch (err) {
         console.error("辨識過程中發生錯誤:", err);
-        alert("發生錯誤：\n" + err.message);
-        showError();
+        showError("發生錯誤：" + err.message);
     } finally {
         loadingOverlay.classList.add('hidden');
         scanBtn.disabled = false;
         replayBtn.classList.remove('hidden');
+        // Restart video just in case it froze
+        if (webcamElement.paused) {
+            webcamElement.play().catch(e => console.error(e));
+        }
     }
 }
 
-function showError() {
+function showError(customMsg) {
     errorCard.classList.remove('hidden');
+    const subText = document.querySelector('#error-card .error-sub');
+    if (customMsg) {
+        subText.textContent = customMsg;
+        subText.style.color = 'red';
+        subText.style.wordBreak = 'break-all';
+    } else {
+        subText.textContent = '請確保藥物包裝完整出現在鏡頭內，並保持光線明亮後再試一次。';
+        subText.style.color = '';
+    }
     speak('未偵測到藥物，或是畫面不清楚，請重新拍攝。');
 }
 
