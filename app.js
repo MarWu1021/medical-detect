@@ -1,7 +1,9 @@
 /**
  * Medication AI Assistant - app.js
- * Senior-friendly interaction logic with Google Gemini API Integration
+ * Senior-friendly interaction logic with Google Gemini API Integration (Official SDK)
  */
+
+import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
 
 const webcamElement = document.getElementById('webcam');
 const scanBtn = document.getElementById('scan-btn');
@@ -111,45 +113,29 @@ async function analyzeWithGemini(base64Image) {
 }
 請只回傳 JSON 格式本身，不要加上任何其他說明文字。`;
 
-    const payload = {
-        contents: [{
-            parts: [
-                { text: prompt },
-                {
-                    inlineData: {
-                        mimeType: "image/jpeg",
-                        data: base64Image
-                    }
-                }
-            ]
-        }],
-        generationConfig: {
-            temperature: 0.1, // Keep it deterministic
+    // Use the official SDK
+    const genAI = new GoogleGenerativeAI(geminiApiKey);
+    // Use gemini-1.5-flash as recommended by Google for multimodal
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    const imageParts = [
+      {
+        inlineData: {
+          data: base64Image,
+          mimeType: "image/jpeg"
         }
-    };
+      }
+    ];
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${geminiApiKey}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-    });
-
-    if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(`API 錯誤碼 ${response.status}: ${errText}`);
-    }
-
-    const data = await response.json();
+    const result = await model.generateContent([prompt, ...imageParts]);
+    const response = await result.response;
+    let text = response.text().trim();
     
     // Check if Gemini blocked it due to safety
-    if (!data.candidates || data.candidates.length === 0 || !data.candidates[0].content) {
-        throw new Error("AI 拒絕回答或被安全機制阻擋：" + JSON.stringify(data));
+    if (!text) {
+        throw new Error("AI 回傳了空白內容，可能被安全機制阻擋。");
     }
 
-    let text = data.candidates[0].content.parts[0].text.trim();
-    
     // Robust JSON extraction using regex
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
