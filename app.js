@@ -99,16 +99,18 @@ function captureBase64Image() {
 
 // 4. API Call to Gemini
 async function analyzeWithGemini(base64Image) {
-    // DEBUG PROMPT: Force AI to describe the image instead of rejecting it.
-    const prompt = `請詳細描述這張圖片裡有什麼？無論你看到什麼（就算是全黑、或是只有臉、或是模糊不清），都請用以下 JSON 格式回傳，不要加上其他任何文字，也不要回傳 NO_MEDICINE：
+    const prompt = `請辨識這張圖片中的物品。
+如果你沒有看到任何像是藥盒、藥瓶、藥錠或保健食品的東西（例如畫面中只有人臉、背景、文具、電器等非藥物），請嚴格且只回覆字串："NO_MEDICINE"。
+如果確定畫面中有藥物或保健食品，請根據包裝上的文字，回覆一段 JSON 格式的資料，包含以下欄位：
 {
-  "name": "請詳細描述你看到的畫面 (例如: 我看到一盒普拿疼、我看到一張全黑的圖、我看到一個人臉)",
-  "category": "測試用類別",
-  "instructions": "測試",
-  "dosage": "測試",
-  "warnings": "無",
-  "voice_msg": "除錯模式執行中"
-}`;
+  "name": "藥物/物品名稱 (例如：普拿疼伏冒加強錠)",
+  "category": "類別",
+  "instructions": "包裝上寫的用途或使用說明",
+  "dosage": "包裝上寫的用法用量",
+  "warnings": "包裝上的注意事項",
+  "voice_msg": "一段友善的語音提示文字，大約30字。"
+}
+請注意，你的回答必須只包含 JSON 本身，或是 "NO_MEDICINE" 這個字串，絕對不要加上任何其他說明文字。`;
 
     const payload = {
         contents: [{
