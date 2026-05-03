@@ -99,18 +99,21 @@ function captureBase64Image() {
 
 // 4. API Call to Gemini
 async function analyzeWithGemini(base64Image) {
-    const prompt = `請辨識這張圖片中的物品。
-如果你沒有看到任何像是藥盒、藥瓶、藥錠或保健食品的東西（例如畫面中只有人臉、背景、文具、電器等非藥物），請嚴格且只回覆字串："NO_MEDICINE"。
-如果確定畫面中有藥物或保健食品，請根據包裝上的文字，回覆一段 JSON 格式的資料，包含以下欄位：
+    const prompt = `你是一個專業的藥物辨識系統。請分析圖片內容並嚴格回傳 JSON 格式。
+1. 若圖片中沒有任何藥物、藥盒、藥錠或保健食品（例如只是文具、電動刮鬍刀、電器、人臉、背景等），請務必回傳以下 JSON：
+{"name": "NO_MEDICINE", "category": "", "instructions": "", "dosage": "", "warnings": "", "voice_msg": ""}
+
+2. 若圖片中確定有藥物或保健食品，請根據包裝文字回傳 JSON：
 {
-  "name": "藥物/物品名稱 (例如：普拿疼伏冒加強錠)",
-  "category": "類別",
-  "instructions": "包裝上寫的用途或使用說明",
-  "dosage": "包裝上寫的用法用量",
-  "warnings": "包裝上的注意事項",
-  "voice_msg": "一段友善的語音提示文字，大約30字。"
+  "name": "藥物名稱 (不可超過15個字)",
+  "category": "類別 (例如：感冒藥)",
+  "instructions": "包裝上寫的用途",
+  "dosage": "用法用量",
+  "warnings": "注意事項",
+  "voice_msg": "一段友善的語音提示文字，大約30字"
 }
-請注意，你的回答必須只包含 JSON 本身，或是 "NO_MEDICINE" 這個字串，絕對不要加上任何其他說明文字。`;
+
+請確保你的回答是純 JSON 格式，不要加上任何 Markdown 標記 (\`\`\`json) 或其他文字。`;
 
     const payload = {
         contents: [{
