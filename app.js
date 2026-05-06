@@ -338,8 +338,7 @@ ${currentMedicineContext}
 請根據藥物資訊，用繁體中文、簡明扼要、且體貼長輩的語氣回答問題。回答大約在50~100字內，直接輸出回答文字就好，不要包含任何 Markdown 或 JSON 標籤。`;
 
         const payload = {
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0.2 }
+            contents: [{ parts: [{ text: prompt }] }]
         };
 
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`, {
@@ -348,7 +347,10 @@ ${currentMedicineContext}
             body: JSON.stringify(payload)
         });
 
-        if (!response.ok) throw new Error('Chat API Error');
+        if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.error?.message || 'Chat API Error');
+        }
         const data = await response.json();
         const reply = data.candidates[0].content.parts[0].text.trim();
         
@@ -358,6 +360,7 @@ ${currentMedicineContext}
     } catch (err) {
         console.error(err);
         appendChatBubble('抱歉，藥師小幫手現在有點忙碌，請稍後再試。', 'ai');
+        alert('開發者除錯訊息 (對話失敗): ' + err.message);
     } finally {
         sendBtn.disabled = false;
         micBtn.disabled = false;
