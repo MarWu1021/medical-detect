@@ -62,6 +62,24 @@
                 </div>
             </div>
 
+            <!-- Chat Assistant (Hidden by default) -->
+            <div id="chat-container" class="result-card hidden" style="margin-top: 20px;">
+                <div class="card-header" style="background-color: var(--highlight); border-radius: 16px; padding: 15px; margin-bottom: 15px; border-bottom: none;">
+                    <h3 style="color: #b45309; margin: 0; font-size: 1.2rem;">💬 智慧藥師小幫手</h3>
+                    <p style="margin: 5px 0 0 0; font-size: 0.9rem; color: #78350f;">針對剛剛掃描的藥物，用語音問我問題！</p>
+                </div>
+                <div id="chat-history" class="chat-history">
+                    <!-- Chat bubbles will go here -->
+                </div>
+                <div class="chat-input-area">
+                    <button id="mic-btn" class="mic-btn" title="用語音發問">
+                        🎤
+                    </button>
+                    <input type="text" id="chat-input" placeholder="例如：飯前吃還是飯後吃？" />
+                    <button id="send-btn" class="send-btn">送出</button>
+                </div>
+            </div>
+
             <!-- Error Display (Hidden by default) -->
             <div id="error-card" class="result-card error-card hidden">
                 <div class="card-header error-header">
@@ -96,6 +114,6 @@
     </div>
 
     <!-- Scripts -->
-    <script src="app.js?v=9"></script>
+    <script src="app.js?v=10"></script>
 </body>
 </html>

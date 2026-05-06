@@ -17,6 +17,13 @@ const medInstructions = document.getElementById('med-instructions');
 const medDosage = document.getElementById('med-dosage');
 const medWarnings = document.getElementById('med-warnings');
 
+// Chat UI Elements
+const chatContainer = document.getElementById('chat-container');
+const chatHistory = document.getElementById('chat-history');
+const chatInput = document.getElementById('chat-input');
+const sendBtn = document.getElementById('send-btn');
+const micBtn = document.getElementById('mic-btn');
+
 // Settings Elements
 const apiKeyInput = document.getElementById('api-key-input');
 const saveKeyBtn = document.getElementById('save-key-btn');
@@ -24,6 +31,8 @@ const apiStatus = document.getElementById('api-status');
 
 let currentStream = null;
 let geminiApiKey = null;
+let currentMedicineContext = null;
+let recognition = null;
 
 // Use an offscreen canvas to capture image
 const canvas = document.createElement('canvas');
@@ -43,6 +52,9 @@ async function init() {
             updateApiStatus(false);
         }
         
+        // Init Speech Recognition
+        initSpeechRecognition();
+
         // Start Webcam
         await startWebcam();
     } catch (err) {
@@ -172,21 +184,28 @@ async function handleScan() {
     scanBtn.disabled = true;
     resultCard.classList.add('hidden');
     errorCard.classList.add('hidden');
+    
+    // Clear previous chat context
+    chatContainer.classList.add('hidden');
+    chatHistory.innerHTML = '';
+    currentMedicineContext = null;
 
     try {
         const base64Img = captureBase64Image();
         const aiResponse = await analyzeWithGemini(base64Img);
 
-        if (aiResponse.includes('NO_MEDICINE')) {
-            showError("AI 回傳了 NO_MEDICINE");
-        } else {
-            try {
-                const medData = JSON.parse(aiResponse);
+        try {
+            const medData = JSON.parse(aiResponse);
+            if (medData.name === "NO_MEDICINE") {
+                showError("AI 回傳了 NO_MEDICINE");
+            } else {
                 displayResult(medData);
-            } catch (parseErr) {
-                console.error("JSON 解析失敗", aiResponse);
-                showError("AI 回傳的格式有誤：" + aiResponse.substring(0, 100));
+                currentMedicineContext = aiResponse; // Save context for chat
+                chatContainer.classList.remove('hidden'); // Show chat UI
             }
+        } catch (parseErr) {
+            console.error("JSON 解析失敗", aiResponse);
+            showError("AI 回傳的格式有誤：" + aiResponse.substring(0, 100));
         }
     } catch (err) {
         console.error("辨識過程中發生錯誤:", err);
@@ -254,6 +273,110 @@ replayBtn.addEventListener('click', () => {
     }
     const textToSpeak = `${medName.textContent}。服用方法：${medInstructions.textContent}。注意：${medWarnings.textContent}`;
     speak(textToSpeak);
+});
+
+// --- Speech & Chat Logic ---
+function initSpeechRecognition() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+        recognition = new SpeechRecognition();
+        recognition.lang = 'zh-TW';
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+
+        recognition.onstart = function() {
+            micBtn.classList.add('recording');
+        };
+
+        recognition.onresult = function(event) {
+            const speechResult = event.results[0][0].transcript;
+            chatInput.value = speechResult;
+            handleChatSend(); // Auto-send when speaking stops
+        };
+
+        recognition.onerror = function(event) {
+            console.error('Speech recognition error', event.error);
+            micBtn.classList.remove('recording');
+            alert('語音辨識發生錯誤，請重試或改用打字。');
+        };
+
+        recognition.onend = function() {
+            micBtn.classList.remove('recording');
+        };
+    } else {
+        micBtn.style.display = 'none'; // Hide if not supported
+    }
+}
+
+function appendChatBubble(text, sender) {
+    const bubble = document.createElement('div');
+    bubble.className = `chat-bubble ${sender}`;
+    bubble.textContent = text;
+    chatHistory.appendChild(bubble);
+    chatHistory.scrollTop = chatHistory.scrollHeight;
+}
+
+async function handleChatSend() {
+    const text = chatInput.value.trim();
+    if (!text || !currentMedicineContext || !geminiApiKey) return;
+
+    chatInput.value = '';
+    appendChatBubble(text, 'user');
+    
+    sendBtn.disabled = true;
+    micBtn.disabled = true;
+    chatInput.disabled = true;
+
+    try {
+        const prompt = `你是一位專業、親切的藥師小幫手。
+使用者剛才掃描了以下藥物資訊（JSON格式）：
+${currentMedicineContext}
+
+使用者現在對這個藥物有疑問：
+「${text}」
+
+請根據藥物資訊，用繁體中文、簡明扼要、且體貼長輩的語氣回答問題。回答大約在50~100字內，直接輸出回答文字就好，不要包含任何 Markdown 或 JSON 標籤。`;
+
+        const payload = {
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.2 }
+        };
+
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) throw new Error('Chat API Error');
+        const data = await response.json();
+        const reply = data.candidates[0].content.parts[0].text.trim();
+        
+        appendChatBubble(reply, 'ai');
+        speak(reply); // Auto speak the AI response
+
+    } catch (err) {
+        console.error(err);
+        appendChatBubble('抱歉，藥師小幫手現在有點忙碌，請稍後再試。', 'ai');
+    } finally {
+        sendBtn.disabled = false;
+        micBtn.disabled = false;
+        chatInput.disabled = false;
+    }
+}
+
+sendBtn.addEventListener('click', handleChatSend);
+chatInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') handleChatSend();
+});
+micBtn.addEventListener('click', () => {
+    if (recognition) {
+        try {
+            recognition.start();
+        } catch(e) {
+            console.error("Microphone already started", e);
+        }
+    }
 });
 
 saveKeyBtn.addEventListener('click', () => {
