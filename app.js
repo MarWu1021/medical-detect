@@ -56,8 +56,15 @@ const zh = {
     defaultSafety: '\u8fa8\u8b58\u7d50\u679c\u50c5\u4f9b\u53c3\u8003\uff0c\u5be6\u969b\u7528\u85e5\u8acb\u4f9d\u85e5\u888b\u3001\u91ab\u5e2b\u6216\u85e5\u5e2b\u6307\u793a\u3002',
     speechFailed: '\u8a9e\u97f3\u8fa8\u8b58\u5931\u6557\uff0c\u8acb\u6539\u7528\u6587\u5b57\u8f38\u5165\u6216\u518d\u8a66\u4e00\u6b21\u3002',
     chatFallback: '\u76ee\u524d\u7121\u6cd5\u56de\u7b54\u9019\u500b\u554f\u984c\u3002\u82e5\u8207\u5291\u91cf\u3001\u904e\u654f\u3001\u4f75\u7528\u85e5\u6216\u8eab\u9ad4\u4e0d\u9069\u6709\u95dc\uff0c\u8acb\u76f4\u63a5\u8a62\u554f\u85e5\u5e2b\u6216\u91ab\u5e2b\u3002',
-    imageOnly: '\u8acb\u9078\u64c7\u5716\u7247\u6a94\u6848\u3002'
+    imageOnly: '\u8acb\u9078\u64c7\u5716\u7247\u6a94\u6848\u3002',
+    serviceBusyTitle: 'AI \u670d\u52d9\u66ab\u6642\u5fd9\u788c',
+    serviceBusy: 'AI \u6a21\u578b\u76ee\u524d\u4f7f\u7528\u91cf\u904e\u9ad8\uff0c\u7cfb\u7d71\u5df2\u7d93\u81ea\u52d5\u91cd\u8a66\u548c\u5207\u63db\u5099\u7528\u6a21\u578b\u3002\u8acb\u7a0d\u5f8c\u518d\u6309\u4e00\u6b21\u78ba\u8a8d\u8fa8\u8b58\u3002',
+    serviceBusyVoice: 'AI \u670d\u52d9\u76ee\u524d\u6bd4\u8f03\u5fd9\uff0c\u8acb\u7a0d\u5f8c\u518d\u8a66\u4e00\u6b21\u3002',
+    apiFailed: 'AI \u8fa8\u8b58\u670d\u52d9\u767c\u751f\u554f\u984c\uff0c\u8acb\u7a0d\u5f8c\u518d\u8a66\u3002'
 };
+
+const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite'];
+const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
 
 let currentStream = null;
 let geminiApiKey = null;
@@ -169,6 +176,48 @@ function readUploadedImage(file) {
     });
 }
 
+function wait(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function makeFriendlyApiError(status, bodyText) {
+    const error = new Error(RETRYABLE_STATUS.has(status) ? zh.serviceBusy : zh.apiFailed);
+    error.status = status;
+    error.bodyText = bodyText;
+    error.isServiceBusy = RETRYABLE_STATUS.has(status);
+    return error;
+}
+
+async function callGemini(payload) {
+    let lastError = null;
+
+    for (const model of GEMINI_MODELS) {
+        for (let attempt = 1; attempt <= 2; attempt += 1) {
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const bodyText = await response.text();
+                    throw makeFriendlyApiError(response.status, bodyText);
+                }
+
+                return await response.json();
+            } catch (err) {
+                lastError = err;
+                const shouldRetry = err.isServiceBusy || err.name === 'TypeError';
+                if (!shouldRetry) throw err;
+                await wait(500 * attempt);
+            }
+        }
+    }
+
+    throw lastError || new Error(zh.apiFailed);
+}
+
 async function analyzeWithGemini(base64Image) {
     const prompt = `
 You are a careful medication identification assistant for users in Taiwan.
@@ -208,18 +257,7 @@ Return this exact JSON shape:
         }
     };
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    });
-
-    if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(`Gemini API error ${response.status}: ${errText}`);
-    }
-
-    const data = await response.json();
+    const data = await callGemini(payload);
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
     if (!text) {
         throw new Error('Gemini returned no readable result.');
@@ -283,11 +321,14 @@ async function handleAnalyze() {
 
 function showError(customMsg) {
     errorCard.classList.remove('hidden');
+    const mainText = document.querySelector('#error-card .error-msg');
     const subText = document.querySelector('#error-card .error-sub');
+    const isServiceBusy = customMsg === zh.serviceBusy;
+    mainText.textContent = isServiceBusy ? zh.serviceBusyTitle : zh.noMedicine;
     subText.textContent = customMsg || zh.retryPhoto;
     subText.style.color = customMsg ? 'var(--warning)' : '';
     subText.style.wordBreak = customMsg ? 'break-word' : '';
-    speak(zh.retryVoice);
+    speak(isServiceBusy ? zh.serviceBusyVoice : zh.retryVoice);
 }
 
 function displayResult(med) {
@@ -380,18 +421,7 @@ Rules:
             generationConfig: { temperature: 0.2 }
         };
 
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-
-        if (!response.ok) {
-            const errData = await response.json().catch(() => ({}));
-            throw new Error(errData.error?.message || 'Chat API Error');
-        }
-
-        const data = await response.json();
+        const data = await callGemini(payload);
         const reply = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
         if (!reply) throw new Error('Gemini returned no answer.');
 
