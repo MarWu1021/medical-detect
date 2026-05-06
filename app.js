@@ -22,6 +22,7 @@ const medInstructions = document.getElementById('med-instructions');
 const medDosage = document.getElementById('med-dosage');
 const medWarnings = document.getElementById('med-warnings');
 const medSafetyNote = document.getElementById('med-safety-note');
+const medSource = document.getElementById('med-source');
 
 const chatContainer = document.getElementById('chat-container');
 const chatHistory = document.getElementById('chat-history');
@@ -74,6 +75,7 @@ let geminiApiKey = null;
 let currentMedicineContext = null;
 let recognition = null;
 let pendingBase64Image = null;
+let trustedMedicines = [];
 
 const canvas = document.createElement('canvas');
 const ctx = canvas.getContext('2d');
@@ -89,11 +91,23 @@ async function init() {
             updateApiStatus(false);
         }
 
+        await loadTrustedMedicines();
         initSpeechRecognition();
         await startWebcam();
     } catch (err) {
         console.error('Init failed:', err);
         alert(zh.initFailed);
+    }
+}
+
+async function loadTrustedMedicines() {
+    try {
+        const response = await fetch('trusted_medicines.json?v=1');
+        if (!response.ok) throw new Error(`trusted data ${response.status}`);
+        trustedMedicines = await response.json();
+    } catch (err) {
+        console.warn('Trusted medicine data unavailable:', err);
+        trustedMedicines = [];
     }
 }
 
@@ -131,6 +145,51 @@ function captureImageDataUrl() {
 
 function dataUrlToBase64(dataUrl) {
     return dataUrl.split(',')[1];
+}
+
+function normalizeText(value) {
+    return String(value || '')
+        .toLowerCase()
+        .replace(/[()\[\]{}"'.,，。:：;；/\\\s-]/g, '');
+}
+
+function findTrustedMedicine(med) {
+    const haystack = normalizeText([
+        med.name,
+        med.category,
+        med.reason,
+        med.instructions,
+        med.warnings
+    ].join(' '));
+
+    return trustedMedicines.find((item) => {
+        const names = [item.official_name, item.display_name, item.active_ingredient, ...(item.aliases || [])];
+        return names.some((name) => {
+            const needle = normalizeText(name);
+            return needle && (haystack.includes(needle) || needle.includes(haystack));
+        });
+    }) || null;
+}
+
+function enrichWithTrustedMedicine(med) {
+    const trusted = findTrustedMedicine(med);
+    if (!trusted) return { ...med, trusted_source: null };
+
+    return {
+        ...med,
+        name: trusted.display_name || med.name,
+        category: trusted.category || med.category,
+        instructions: trusted.plain_indication || med.instructions,
+        dosage: trusted.plain_dosage || med.dosage,
+        warnings: trusted.plain_warnings || med.warnings,
+        safety_note: trusted.plain_safety || med.safety_note,
+        trusted_source: {
+            name: trusted.source_name,
+            url: trusted.source_url,
+            official_name: trusted.official_name,
+            active_ingredient: trusted.active_ingredient
+        }
+    };
 }
 
 function showPhotoPreview(dataUrl) {
@@ -312,8 +371,9 @@ async function handleAnalyze() {
             return;
         }
 
-        displayResult(medData);
-        currentMedicineContext = medData;
+        const enrichedData = enrichWithTrustedMedicine(medData);
+        displayResult(enrichedData);
+        currentMedicineContext = enrichedData;
         chatContainer.classList.remove('hidden');
     } catch (err) {
         console.error('Analyze failed:', err);
@@ -328,6 +388,7 @@ async function handleAnalyze() {
 
 function showError(customMsg) {
     errorCard.classList.remove('hidden');
+    updateSourceNote(null);
     const mainText = document.querySelector('#error-card .error-msg');
     const subText = document.querySelector('#error-card .error-sub');
     const isServiceBusy = customMsg === zh.serviceBusy;
@@ -347,9 +408,37 @@ function displayResult(med) {
     medDosage.textContent = med.dosage || zh.defaultDosage;
     medWarnings.textContent = med.warnings || zh.defaultWarnings;
     medSafetyNote.textContent = med.safety_note || zh.defaultSafety;
+    updateSourceNote(med.trusted_source);
 
     resultCard.classList.remove('hidden');
     speak(med.voice_msg || `${medName.textContent}。${zh.defaultSafety}`);
+}
+
+function updateSourceNote(source) {
+    if (!medSource) return;
+
+    if (!source) {
+        medSource.classList.add('hidden');
+        medSource.textContent = '';
+        return;
+    }
+
+    medSource.classList.remove('hidden');
+    medSource.innerHTML = '';
+
+    const label = document.createElement('span');
+    label.textContent = `資料來源：${source.name}。官方品名：${source.official_name}。主成分：${source.active_ingredient}。`;
+    medSource.appendChild(label);
+
+    if (source.url) {
+        const link = document.createElement('a');
+        link.href = source.url;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.textContent = '查看資料來源';
+        medSource.appendChild(document.createTextNode(' '));
+        medSource.appendChild(link);
+    }
 }
 
 function speak(text) {

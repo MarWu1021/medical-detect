@@ -262,6 +262,23 @@ body {
     color: #1e40af;
 }
 
+.source-note {
+    background-color: #f8fafc;
+    border: 2px solid #cbd5e1;
+    border-radius: 12px;
+    color: #475569;
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.6;
+    padding: 14px 16px;
+}
+
+.source-note a {
+    color: var(--primary-dark);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
 /* Safety Alert */
 .safety-alert {
     background-color: #991b1b;
