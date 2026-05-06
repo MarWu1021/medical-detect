@@ -60,11 +60,14 @@ const zh = {
     serviceBusyTitle: 'AI \u670d\u52d9\u66ab\u6642\u5fd9\u788c',
     serviceBusy: 'AI \u6a21\u578b\u76ee\u524d\u4f7f\u7528\u91cf\u904e\u9ad8\uff0c\u7cfb\u7d71\u5df2\u7d93\u81ea\u52d5\u91cd\u8a66\u548c\u5207\u63db\u5099\u7528\u6a21\u578b\u3002\u8acb\u7a0d\u5f8c\u518d\u6309\u4e00\u6b21\u78ba\u8a8d\u8fa8\u8b58\u3002',
     serviceBusyVoice: 'AI \u670d\u52d9\u76ee\u524d\u6bd4\u8f03\u5fd9\uff0c\u8acb\u7a0d\u5f8c\u518d\u8a66\u4e00\u6b21\u3002',
+    quotaTitle: 'API \u984d\u5ea6\u5df2\u7528\u5b8c',
+    quotaExceeded: '\u9019\u500b Gemini API Key \u4eca\u5929\u7684\u514d\u8cbb\u8acb\u6c42\u984d\u5ea6\u5df2\u7d93\u7528\u5b8c\u3002\u8acb\u660e\u5929\u518d\u8a66\uff0c\u6216\u63db\u4e00\u500b\u6709\u984d\u5ea6\u7684 API Key\u3002',
+    quotaVoice: 'Gemini API Key \u4eca\u5929\u984d\u5ea6\u5df2\u7528\u5b8c\uff0c\u8acb\u660e\u5929\u518d\u8a66\u6216\u66f4\u63db API Key\u3002',
     apiFailed: 'AI \u8fa8\u8b58\u670d\u52d9\u767c\u751f\u554f\u984c\uff0c\u8acb\u7a0d\u5f8c\u518d\u8a66\u3002'
 };
 
 const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite'];
-const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
+const BUSY_STATUS = new Set([500, 502, 503, 504]);
 
 let currentStream = null;
 let geminiApiKey = null;
@@ -181,10 +184,13 @@ function wait(ms) {
 }
 
 function makeFriendlyApiError(status, bodyText) {
-    const error = new Error(RETRYABLE_STATUS.has(status) ? zh.serviceBusy : zh.apiFailed);
+    const isQuota = status === 429 || bodyText.includes('RESOURCE_EXHAUSTED') || bodyText.includes('quota');
+    const isBusy = BUSY_STATUS.has(status);
+    const error = new Error(isQuota ? zh.quotaExceeded : (isBusy ? zh.serviceBusy : zh.apiFailed));
     error.status = status;
     error.bodyText = bodyText;
-    error.isServiceBusy = RETRYABLE_STATUS.has(status);
+    error.isQuotaExceeded = isQuota;
+    error.isServiceBusy = isBusy;
     return error;
 }
 
@@ -208,6 +214,7 @@ async function callGemini(payload) {
                 return await response.json();
             } catch (err) {
                 lastError = err;
+                if (err.isQuotaExceeded) break;
                 const shouldRetry = err.isServiceBusy || err.name === 'TypeError';
                 if (!shouldRetry) throw err;
                 await wait(500 * attempt);
@@ -324,11 +331,12 @@ function showError(customMsg) {
     const mainText = document.querySelector('#error-card .error-msg');
     const subText = document.querySelector('#error-card .error-sub');
     const isServiceBusy = customMsg === zh.serviceBusy;
-    mainText.textContent = isServiceBusy ? zh.serviceBusyTitle : zh.noMedicine;
+    const isQuotaExceeded = customMsg === zh.quotaExceeded;
+    mainText.textContent = isQuotaExceeded ? zh.quotaTitle : (isServiceBusy ? zh.serviceBusyTitle : zh.noMedicine);
     subText.textContent = customMsg || zh.retryPhoto;
     subText.style.color = customMsg ? 'var(--warning)' : '';
     subText.style.wordBreak = customMsg ? 'break-word' : '';
-    speak(isServiceBusy ? zh.serviceBusyVoice : zh.retryVoice);
+    speak(isQuotaExceeded ? zh.quotaVoice : (isServiceBusy ? zh.serviceBusyVoice : zh.retryVoice));
 }
 
 function displayResult(med) {
