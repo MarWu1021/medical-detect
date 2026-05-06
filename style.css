@@ -44,7 +44,7 @@ body {
     font-size: 2.5rem;
     font-weight: 900;
     color: var(--primary);
-    letter-spacing: -0.5px;
+    letter-spacing: 0;
 }
 
 .subtitle {
@@ -69,6 +69,13 @@ body {
     width: 100%;
     height: 100%;
     object-fit: cover;
+}
+
+.photo-preview {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
 }
 
 .scanner-line {
@@ -150,6 +157,20 @@ body {
     color: white;
 }
 
+.upload-btn {
+    background-color: #0f766e;
+    color: white;
+}
+
+.neutral-btn {
+    background-color: #475569;
+    color: white;
+}
+
+.file-input {
+    display: none;
+}
+
 .hidden {
     display: none !important;
 }
@@ -173,6 +194,7 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 16px;
     margin-bottom: 25px;
     border-bottom: 2px solid #f1f5f9;
     padding-bottom: 15px;
@@ -181,6 +203,13 @@ body {
 #med-name {
     font-size: 2rem;
     color: var(--text-dark);
+}
+
+.confidence-text {
+    margin-top: 6px;
+    color: #64748b;
+    font-size: 1rem;
+    font-weight: 700;
 }
 
 .tag {
@@ -222,6 +251,17 @@ body {
     color: #991b1b;
 }
 
+.safety-note {
+    background-color: #eff6ff;
+    padding: 20px;
+    border-radius: 16px;
+    border-left: 8px solid var(--primary);
+}
+
+.safety-note p {
+    color: #1e40af;
+}
+
 /* Safety Alert */
 .safety-alert {
     background-color: #991b1b;
@@ -243,6 +283,23 @@ body {
     .app-header h1 { font-size: 2rem; }
     .big-btn { font-size: 1.4rem; padding: 20px; }
     #med-name { font-size: 1.4rem; }
+    .card-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+    .tag {
+        align-self: flex-start;
+    }
+    .chat-input-area {
+        flex-wrap: wrap;
+    }
+    #chat-input {
+        min-width: 0;
+        flex-basis: calc(100% - 60px);
+    }
+    .send-btn {
+        width: 100%;
+    }
 }
 
 /* Error Card Specific Styles */
@@ -317,6 +374,25 @@ body {
 }
 
 /* Chat UI Styles */
+.chat-panel-header {
+    background-color: var(--highlight);
+    border-radius: 16px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+.chat-panel-header h3 {
+    color: #b45309;
+    margin: 0;
+    font-size: 1.2rem;
+}
+
+.chat-panel-header p {
+    margin: 5px 0 0 0;
+    font-size: 0.95rem;
+    color: #78350f;
+}
+
 .chat-history {
     max-height: 300px;
     overflow-y: auto;
