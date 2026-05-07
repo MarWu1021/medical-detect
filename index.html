@@ -111,11 +111,28 @@
             <p id="api-status" class="model-status">&#x5C1A;&#x672A;&#x8A2D;&#x5B9A; API Key&#xFF0C;&#x7121;&#x6CD5;&#x4F7F;&#x7528; AI &#x8FA8;&#x8B58;&#x3002;</p>
         </div>
 
+        <section class="settings-panel reminder-panel">
+            <h3>&#x8A9E;&#x97F3;&#x8207;&#x7528;&#x85E5;&#x63D0;&#x9192;</h3>
+            <label class="field-label" for="voice-mode">&#x8A9E;&#x97F3;&#x6A21;&#x5F0F;</label>
+            <select id="voice-mode" class="select-input">
+                <option value="mandarin">&#x570B;&#x8A9E;</option>
+                <option value="taiwanese">&#x53F0;&#x8A9E;&#x53E3;&#x543B;</option>
+            </select>
+
+            <div class="reminder-form">
+                <input type="text" id="reminder-name" placeholder="&#x85E5;&#x540D;&#xFF0C;&#x4F8B;&#x5982;&#x666E;&#x62FF;&#x75BC;">
+                <input type="time" id="reminder-time">
+                <button id="add-reminder-btn" class="small-btn">&#x65B0;&#x589E;&#x63D0;&#x9192;</button>
+            </div>
+            <p class="helper-text">&#x63D0;&#x9192;&#x6703;&#x5B58;&#x5728;&#x9019;&#x53F0;&#x624B;&#x6A5F;&#x7684;&#x700F;&#x89BD;&#x5668;&#x3002;&#x9801;&#x9762;&#x958B;&#x8457;&#x6642;&#x53EF;&#x4EE5;&#x8DF3;&#x51FA;&#x901A;&#x77E5;&#x3002;</p>
+            <div id="reminder-list" class="reminder-list"></div>
+        </section>
+
         <footer class="app-footer">
             <p>2026 AI &#x85E5;&#x54C1;&#x8FA8;&#x8B58;&#x52A9;&#x624B;&#xFF0C;&#x7D50;&#x679C;&#x50C5;&#x4F9B;&#x53C3;&#x8003;&#x3002;</p>
         </footer>
     </div>
 
-    <script src="app.js?v=15"></script>
+    <script src="app.js?v=16"></script>
 </body>
 </html>

@@ -33,6 +33,11 @@ const micBtn = document.getElementById('mic-btn');
 const apiKeyInput = document.getElementById('api-key-input');
 const saveKeyBtn = document.getElementById('save-key-btn');
 const apiStatus = document.getElementById('api-status');
+const voiceModeSelect = document.getElementById('voice-mode');
+const reminderNameInput = document.getElementById('reminder-name');
+const reminderTimeInput = document.getElementById('reminder-time');
+const addReminderBtn = document.getElementById('add-reminder-btn');
+const reminderList = document.getElementById('reminder-list');
 
 const zh = {
     initFailed: '\u7121\u6cd5\u555f\u52d5\u76f8\u6a5f\u6216\u521d\u59cb\u5316\u61c9\u7528\u7a0b\u5f0f\uff0c\u8acb\u78ba\u8a8d\u700f\u89bd\u5668\u6b0a\u9650\u3002',
@@ -64,7 +69,13 @@ const zh = {
     quotaTitle: 'API \u984d\u5ea6\u5df2\u7528\u5b8c',
     quotaExceeded: '\u9019\u500b Gemini API Key \u4eca\u5929\u7684\u514d\u8cbb\u8acb\u6c42\u984d\u5ea6\u5df2\u7d93\u7528\u5b8c\u3002\u8acb\u660e\u5929\u518d\u8a66\uff0c\u6216\u63db\u4e00\u500b\u6709\u984d\u5ea6\u7684 API Key\u3002',
     quotaVoice: 'Gemini API Key \u4eca\u5929\u984d\u5ea6\u5df2\u7528\u5b8c\uff0c\u8acb\u660e\u5929\u518d\u8a66\u6216\u66f4\u63db API Key\u3002',
-    apiFailed: 'AI \u8fa8\u8b58\u670d\u52d9\u767c\u751f\u554f\u984c\uff0c\u8acb\u7a0d\u5f8c\u518d\u8a66\u3002'
+    apiFailed: 'AI \u8fa8\u8b58\u670d\u52d9\u767c\u751f\u554f\u984c\uff0c\u8acb\u7a0d\u5f8c\u518d\u8a66\u3002',
+    reminderNeedName: '\u8acb\u8f38\u5165\u85e5\u540d\u3002',
+    reminderNeedTime: '\u8acb\u9078\u64c7\u63d0\u9192\u6642\u9593\u3002',
+    reminderEmpty: '\u5c1a\u672a\u8a2d\u5b9a\u7528\u85e5\u63d0\u9192\u3002',
+    reminderTitle: '\u7528\u85e5\u63d0\u9192',
+    reminderBodyPrefix: '\u8a72\u7528\u85e5\u4e86\uff1a',
+    notificationBlocked: '\u700f\u89bd\u5668\u901a\u77e5\u6c92\u6709\u958b\u555f\uff0c\u9801\u9762\u6703\u4fdd\u7559\u63d0\u9192\uff0c\u4f46\u53ef\u80fd\u4e0d\u6703\u8df3\u51fa\u901a\u77e5\u3002'
 };
 
 const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite'];
@@ -76,6 +87,8 @@ let currentMedicineContext = null;
 let recognition = null;
 let pendingBase64Image = null;
 let trustedMedicines = [];
+let reminders = [];
+let firedReminderKeys = new Set();
 
 const canvas = document.createElement('canvas');
 const ctx = canvas.getContext('2d');
@@ -92,6 +105,8 @@ async function init() {
         }
 
         await loadTrustedMedicines();
+        initVoiceMode();
+        initReminders();
         initSpeechRecognition();
         await startWebcam();
     } catch (err) {
@@ -114,6 +129,23 @@ async function loadTrustedMedicines() {
 function updateApiStatus(hasKey) {
     apiStatus.textContent = hasKey ? zh.keySaved : zh.keyMissingStatus;
     apiStatus.style.color = hasKey ? 'var(--secondary)' : 'var(--warning)';
+}
+
+function initVoiceMode() {
+    const savedMode = localStorage.getItem('voiceMode') || 'mandarin';
+    voiceModeSelect.value = savedMode;
+    voiceModeSelect.addEventListener('change', () => {
+        localStorage.setItem('voiceMode', voiceModeSelect.value);
+    });
+}
+
+function getVoiceMode() {
+    return voiceModeSelect?.value || 'mandarin';
+}
+
+function makeTaiwaneseReminder(text) {
+    const shortText = String(text || '').replace(/\s+/g, ' ').slice(0, 80);
+    return `\u63d0\u9192\u4f60\uff0c${shortText}\u3002\u85e5\u611b\u7167\u85e5\u888b\u6216\u85e5\u5e2b\u6307\u793a\u5403\uff0c\u82e5\u8eab\u9ad4\u6709\u4e0d\u8212\u670d\uff0c\u8a18\u5f97\u554f\u91ab\u5e2b\u6216\u85e5\u5e2b\u3002`;
 }
 
 async function startWebcam() {
@@ -441,12 +473,130 @@ function updateSourceNote(source) {
     }
 }
 
+function initReminders() {
+    reminders = JSON.parse(localStorage.getItem('medicineReminders') || '[]');
+    renderReminders();
+    addReminderBtn.addEventListener('click', addReminder);
+    setInterval(checkReminders, 30000);
+    requestNotificationPermission();
+}
+
+function saveReminders() {
+    localStorage.setItem('medicineReminders', JSON.stringify(reminders));
+}
+
+function addReminder() {
+    const name = reminderNameInput.value.trim();
+    const time = reminderTimeInput.value;
+
+    if (!name) {
+        alert(zh.reminderNeedName);
+        return;
+    }
+    if (!time) {
+        alert(zh.reminderNeedTime);
+        return;
+    }
+
+    reminders.push({
+        id: String(Date.now()),
+        name,
+        time
+    });
+    reminderNameInput.value = '';
+    reminderTimeInput.value = '';
+    saveReminders();
+    renderReminders();
+    requestNotificationPermission();
+}
+
+function deleteReminder(id) {
+    reminders = reminders.filter((reminder) => reminder.id !== id);
+    saveReminders();
+    renderReminders();
+}
+
+function renderReminders() {
+    reminderList.innerHTML = '';
+
+    if (!reminders.length) {
+        const empty = document.createElement('p');
+        empty.className = 'helper-text';
+        empty.textContent = zh.reminderEmpty;
+        reminderList.appendChild(empty);
+        return;
+    }
+
+    reminders
+        .slice()
+        .sort((a, b) => a.time.localeCompare(b.time))
+        .forEach((reminder) => {
+            const item = document.createElement('div');
+            item.className = 'reminder-item';
+
+            const text = document.createElement('div');
+            const name = document.createElement('strong');
+            name.textContent = reminder.name;
+            const time = document.createElement('span');
+            time.textContent = reminder.time;
+            text.appendChild(name);
+            text.appendChild(time);
+
+            const button = document.createElement('button');
+            button.className = 'delete-reminder-btn';
+            button.textContent = '\u522a\u9664';
+            button.addEventListener('click', () => deleteReminder(reminder.id));
+
+            item.appendChild(text);
+            item.appendChild(button);
+            reminderList.appendChild(item);
+        });
+}
+
+function requestNotificationPermission() {
+    if (!('Notification' in window)) return;
+    if (Notification.permission === 'default') {
+        Notification.requestPermission().catch(console.warn);
+    }
+}
+
+function checkReminders() {
+    if (!reminders.length) return;
+
+    const now = new Date();
+    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const currentDate = now.toISOString().slice(0, 10);
+    firedReminderKeys = new Set([...firedReminderKeys].filter((key) => key.startsWith(currentDate)));
+
+    reminders
+        .filter((reminder) => reminder.time === currentTime)
+        .forEach((reminder) => {
+            const reminderKey = `${currentDate}-${reminder.id}-${currentTime}`;
+            if (firedReminderKeys.has(reminderKey)) return;
+            firedReminderKeys.add(reminderKey);
+            triggerReminder(reminder);
+        });
+}
+
+function triggerReminder(reminder) {
+    const body = `${zh.reminderBodyPrefix}${reminder.name}`;
+
+    if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification(zh.reminderTitle, { body });
+    } else if ('Notification' in window && Notification.permission !== 'denied') {
+        requestNotificationPermission();
+    }
+
+    speak(body);
+}
+
 function speak(text) {
     if (!('speechSynthesis' in window) || !text) return;
 
     window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'zh-TW';
+    const spokenText = getVoiceMode() === 'taiwanese' ? makeTaiwaneseReminder(text) : text;
+    const utterance = new SpeechSynthesisUtterance(spokenText);
+    utterance.lang = getVoiceMode() === 'taiwanese' ? 'nan-TW' : 'zh-TW';
     utterance.rate = 0.9;
     utterance.pitch = 1.0;
     window.speechSynthesis.speak(utterance);

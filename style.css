@@ -370,6 +370,77 @@ body {
     font-size: 1rem;
 }
 
+.field-label {
+    display: block;
+    color: #334155;
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.select-input {
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    color: var(--text-dark);
+    font-size: 1rem;
+    margin-bottom: 14px;
+}
+
+.reminder-panel {
+    background: #f1f5f9;
+}
+
+.reminder-form {
+    display: grid;
+    gap: 10px;
+}
+
+.helper-text {
+    color: #64748b;
+    font-size: 0.95rem;
+    margin-top: 12px;
+}
+
+.reminder-list {
+    display: grid;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.reminder-item {
+    align-items: center;
+    background: white;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    display: grid;
+    gap: 8px;
+    grid-template-columns: 1fr auto;
+    padding: 12px;
+}
+
+.reminder-item strong {
+    color: var(--text-dark);
+    display: block;
+    font-size: 1.05rem;
+}
+
+.reminder-item span {
+    color: #64748b;
+    font-weight: 700;
+}
+
+.delete-reminder-btn {
+    background: #fee2e2;
+    border: none;
+    border-radius: 8px;
+    color: #991b1b;
+    cursor: pointer;
+    font-weight: 700;
+    padding: 8px 10px;
+}
+
 .small-btn {
     background-color: #334155;
     color: white;
