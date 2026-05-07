@@ -441,6 +441,47 @@ body {
     padding: 8px 10px;
 }
 
+.reminder-alert {
+    align-items: center;
+    background: #0f172a;
+    border: 3px solid #38bdf8;
+    border-radius: 16px;
+    bottom: 18px;
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.35);
+    color: white;
+    display: grid;
+    gap: 12px;
+    grid-template-columns: 1fr auto;
+    left: 18px;
+    padding: 16px;
+    position: fixed;
+    right: 18px;
+    z-index: 50;
+}
+
+.reminder-alert strong {
+    display: block;
+    font-size: 1.1rem;
+    margin-bottom: 4px;
+}
+
+.reminder-alert p {
+    color: #e2e8f0;
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.dismiss-reminder-btn {
+    background: #facc15;
+    border: none;
+    border-radius: 10px;
+    color: #422006;
+    cursor: pointer;
+    font-weight: 900;
+    padding: 10px 12px;
+}
+
 .small-btn {
     background-color: #334155;
     color: white;

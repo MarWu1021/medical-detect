@@ -38,6 +38,10 @@ const reminderNameInput = document.getElementById('reminder-name');
 const reminderTimeInput = document.getElementById('reminder-time');
 const addReminderBtn = document.getElementById('add-reminder-btn');
 const reminderList = document.getElementById('reminder-list');
+const reminderAlert = document.getElementById('reminder-alert');
+const reminderAlertTitle = document.getElementById('reminder-alert-title');
+const reminderAlertBody = document.getElementById('reminder-alert-body');
+const dismissReminderBtn = document.getElementById('dismiss-reminder-btn');
 
 const zh = {
     initFailed: '\u7121\u6cd5\u555f\u52d5\u76f8\u6a5f\u6216\u521d\u59cb\u5316\u61c9\u7528\u7a0b\u5f0f\uff0c\u8acb\u78ba\u8a8d\u700f\u89bd\u5668\u6b0a\u9650\u3002',
@@ -477,8 +481,10 @@ function initReminders() {
     reminders = JSON.parse(localStorage.getItem('medicineReminders') || '[]');
     renderReminders();
     addReminderBtn.addEventListener('click', addReminder);
-    setInterval(checkReminders, 30000);
+    dismissReminderBtn.addEventListener('click', hideReminderAlert);
+    setInterval(checkReminders, 10000);
     requestNotificationPermission();
+    checkReminders();
 }
 
 function saveReminders() {
@@ -508,6 +514,7 @@ function addReminder() {
     saveReminders();
     renderReminders();
     requestNotificationPermission();
+    checkReminders();
 }
 
 function deleteReminder(id) {
@@ -580,6 +587,7 @@ function checkReminders() {
 
 function triggerReminder(reminder) {
     const body = `${zh.reminderBodyPrefix}${reminder.name}`;
+    showReminderAlert(body);
 
     if ('Notification' in window && Notification.permission === 'granted') {
         new Notification(zh.reminderTitle, { body });
@@ -588,6 +596,16 @@ function triggerReminder(reminder) {
     }
 
     speak(body);
+}
+
+function showReminderAlert(body) {
+    reminderAlertTitle.textContent = zh.reminderTitle;
+    reminderAlertBody.textContent = body;
+    reminderAlert.classList.remove('hidden');
+}
+
+function hideReminderAlert() {
+    reminderAlert.classList.add('hidden');
 }
 
 function speak(text) {
