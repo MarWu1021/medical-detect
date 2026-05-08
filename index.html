@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>&#x85E5;&#x54C1;&#x8FA8;&#x8B58;&#x52A9;&#x624B; - AI &#x7528;&#x85E5;&#x8CC7;&#x8A0A;</title>
+    <title>藥品辨識助手 - AI 用藥資訊</title>
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
@@ -11,8 +11,8 @@
 <body>
     <div class="app-container">
         <header class="app-header">
-            <h1>&#x85E5;&#x54C1;&#x8FA8;&#x8B58;&#x52A9;&#x624B;</h1>
-            <p class="subtitle">&#x62CD;&#x4E0B;&#x85E5;&#x888B;&#x3001;&#x85E5;&#x76D2;&#x6216;&#x85E5;&#x4E38;&#xFF0C;&#x6574;&#x7406;&#x91CD;&#x8981;&#x7528;&#x85E5;&#x8CC7;&#x8A0A;</p>
+            <h1>藥品辨識助手</h1>
+            <p class="subtitle">拍下藥袋、藥盒或藥丸，整理重要用藥資訊</p>
         </header>
 
         <main class="main-content">
@@ -22,125 +22,125 @@
                 <div id="scanner-line" class="scanner-line"></div>
                 <div id="loading-overlay" class="overlay hidden">
                     <div class="spinner"></div>
-                    <p>&#x6B63;&#x5728;&#x8FA8;&#x8B58;&#x4E2D;...</p>
+                    <p>正在辨識中...</p>
                 </div>
             </div>
 
             <div class="action-bar">
                 <button id="scan-btn" class="big-btn primary-btn">
-                    <span class="btn-icon">&#x62CD;</span>
-                    <span class="btn-text">&#x62CD;&#x7167;</span>
+                    <span class="btn-icon" aria-hidden="true">&#x1F4F7;</span>
+                    <span class="btn-text">拍照</span>
                 </button>
                 <label for="upload-input" class="big-btn upload-btn">
-                    <span class="btn-icon">&#x9078;</span>
-                    <span class="btn-text">&#x9078;&#x64C7;&#x7167;&#x7247;</span>
+                    <span class="btn-icon" aria-hidden="true">&#x1F5BC;&#xFE0F;</span>
+                    <span class="btn-text">選擇照片</span>
                 </label>
                 <input id="upload-input" class="file-input" type="file" accept="image/*">
                 <button id="analyze-btn" class="big-btn primary-btn hidden">
-                    <span class="btn-icon">&#x8FA8;</span>
-                    <span class="btn-text">&#x78BA;&#x8A8D;&#x8FA8;&#x8B58;</span>
+                    <span class="btn-icon" aria-hidden="true">&#x1F50D;</span>
+                    <span class="btn-text">確認辨識</span>
                 </button>
                 <button id="retake-btn" class="big-btn neutral-btn hidden">
-                    <span class="btn-icon">&#x91CD;</span>
-                    <span class="btn-text">&#x91CD;&#x65B0;&#x62CD;&#x651D;</span>
+                    <span class="btn-icon" aria-hidden="true">&#x1F504;</span>
+                    <span class="btn-text">重新拍攝</span>
                 </button>
                 <button id="replay-btn" class="big-btn secondary-btn hidden">
-                    <span class="btn-icon">&#x807D;</span>
-                    <span class="btn-text">&#x91CD;&#x64AD;&#x8A9E;&#x97F3;&#x8AAA;&#x660E;</span>
+                    <span class="btn-icon" aria-hidden="true">&#x1F50A;</span>
+                    <span class="btn-text">重播語音說明</span>
                 </button>
             </div>
 
             <div id="result-card" class="result-card hidden">
                 <div class="card-header">
                     <div>
-                        <h2 id="med-name">&#x6B63;&#x5728;&#x8B80;&#x53D6;...</h2>
-                        <p id="med-confidence" class="confidence-text">&#x4FE1;&#x5FC3;&#x7A0B;&#x5EA6;&#xFF1A;&#x5C1A;&#x672A;&#x8FA8;&#x8B58;</p>
+                        <h2 id="med-name">正在讀取...</h2>
+                        <p id="med-confidence" class="confidence-text">信心程度：尚未辨識</p>
                     </div>
-                    <span id="med-category" class="tag">&#x5206;&#x985E;</span>
+                    <span id="med-category" class="tag">分類</span>
                 </div>
                 <div class="card-content">
                     <div class="info-section instruction-highlight">
-                        <h3>&#x5EFA;&#x8B70;&#x7528;&#x6CD5;</h3>
+                        <h3>建議用法</h3>
                         <p id="med-instructions">--</p>
                     </div>
                     <div class="info-section">
-                        <h3>&#x5E38;&#x898B;&#x5291;&#x91CF;&#x8CC7;&#x8A0A;</h3>
+                        <h3>常見劑量資訊</h3>
                         <p id="med-dosage">--</p>
                     </div>
                     <div class="info-section warning-box">
-                        <h3>&#x6CE8;&#x610F;&#x4E8B;&#x9805;</h3>
+                        <h3>注意事項</h3>
                         <p id="med-warnings">--</p>
                     </div>
                     <div class="info-section safety-note">
-                        <h3>&#x5B89;&#x5168;&#x63D0;&#x9192;</h3>
-                        <p id="med-safety-note">&#x8FA8;&#x8B58;&#x7D50;&#x679C;&#x50C5;&#x4F9B;&#x53C3;&#x8003;&#xFF0C;&#x5BE6;&#x969B;&#x7528;&#x85E5;&#x8ACB;&#x4F9D;&#x85E5;&#x888B;&#x3001;&#x91AB;&#x5E2B;&#x6216;&#x85E5;&#x5E2B;&#x6307;&#x793A;&#x3002;</p>
+                        <h3>安全提醒</h3>
+                        <p id="med-safety-note">辨識結果僅供參考，實際用藥請依藥袋、醫師或藥師指示。</p>
                     </div>
                     <div id="med-source" class="source-note hidden"></div>
                 </div>
             </div>
 
-            <div id="chat-container" class="result-card hidden" style="margin-top: 20px;">
+            <div id="chat-container" class="result-card hidden">
                 <div class="chat-panel-header">
-                    <h3>&#x7528;&#x85E5;&#x8FFD;&#x554F;</h3>
-                    <p>&#x53EF;&#x4EE5;&#x554F;&#xFF1A;&#x9019;&#x500B;&#x85E5;&#x98EF;&#x524D;&#x9084;&#x98EF;&#x5F8C;&#x5403;&#xFF1F;&#x6216;&#x5FD8;&#x8A18;&#x5403;&#x4E00;&#x6B21;&#x600E;&#x9EBC;&#x8FA6;&#xFF1F;</p>
+                    <h3>用藥追問</h3>
+                    <p>可以問：這個藥飯前還飯後吃？或忘記吃一次怎麼辦？</p>
                 </div>
                 <div id="chat-history" class="chat-history"></div>
                 <div class="chat-input-area">
-                    <button id="mic-btn" class="mic-btn" title="voice input">&#x9EA5;</button>
-                    <input type="text" id="chat-input" placeholder="&#x8F38;&#x5165;&#x4F60;&#x7684;&#x7528;&#x85E5;&#x554F;&#x984C;..." />
-                    <button id="send-btn" class="send-btn">&#x9001;&#x51FA;</button>
+                    <button id="mic-btn" class="mic-btn" title="voice input">麥</button>
+                    <input type="text" id="chat-input" placeholder="輸入你的用藥問題..." />
+                    <button id="send-btn" class="send-btn">送出</button>
                 </div>
             </div>
 
             <div id="error-card" class="result-card error-card hidden">
                 <div class="card-header error-header">
-                    <h2>&#x8FA8;&#x8B58;&#x5931;&#x6557;</h2>
+                    <h2>辨識失敗</h2>
                 </div>
                 <div class="card-content">
-                    <p class="error-msg">&#x76EE;&#x524D;&#x7121;&#x6CD5;&#x78BA;&#x8A8D;&#x7167;&#x7247;&#x4E2D;&#x7684;&#x85E5;&#x54C1;&#x3002;</p>
-                    <p class="error-sub">&#x8ACB;&#x91CD;&#x65B0;&#x62CD;&#x651D;&#x6E05;&#x695A;&#x7684;&#x85E5;&#x76D2;&#x3001;&#x85E5;&#x888B;&#x6A19;&#x7C64;&#x6216;&#x85E5;&#x4E38;&#x6B63;&#x9762;&#x3002;</p>
+                    <p class="error-msg">目前無法確認照片中的藥品。</p>
+                    <p class="error-sub">請重新拍攝清楚的藥盒、藥袋標籤或藥丸正面。</p>
                 </div>
             </div>
         </main>
 
         <div class="settings-panel">
-            <h3>AI &#x8A2D;&#x5B9A;</h3>
-            <p>&#x6E2C;&#x8A66;&#x968E;&#x6BB5;&#x8ACB;&#x8F38;&#x5165;&#x4F60;&#x7684; Google Gemini API Key&#x3002;&#x6B63;&#x5F0F;&#x5206;&#x4EAB;&#x6642;&#x5EFA;&#x8B70;&#x6539;&#x6210;&#x5F8C;&#x7AEF;&#x4FDD;&#x5B58;&#x3002;</p>
+            <h3>AI 設定</h3>
+            <p>測試階段請輸入你的 Google Gemini API Key。正式分享時建議改成後端保存。</p>
             <input type="password" id="api-key-input" placeholder="Gemini API Key..." value="" />
-            <button id="save-key-btn" class="small-btn">&#x5132;&#x5B58; API Key</button>
-            <p id="api-status" class="model-status">&#x5C1A;&#x672A;&#x8A2D;&#x5B9A; API Key&#xFF0C;&#x7121;&#x6CD5;&#x4F7F;&#x7528; AI &#x8FA8;&#x8B58;&#x3002;</p>
+            <button id="save-key-btn" class="small-btn">儲存 API Key</button>
+            <p id="api-status" class="model-status">尚未設定 API Key，無法使用 AI 辨識。</p>
         </div>
 
         <section class="settings-panel reminder-panel">
-            <h3>&#x8A9E;&#x97F3;&#x8207;&#x7528;&#x85E5;&#x63D0;&#x9192;</h3>
-            <label class="field-label" for="voice-mode">&#x8A9E;&#x97F3;&#x6A21;&#x5F0F;</label>
+            <h3>語音與用藥提醒</h3>
+            <label class="field-label" for="voice-mode">語音模式</label>
             <select id="voice-mode" class="select-input">
-                <option value="mandarin">&#x570B;&#x8A9E;</option>
-                <option value="taiwanese">&#x53F0;&#x8A9E;&#x53E3;&#x543B;</option>
+                <option value="mandarin">國語</option>
+                <option value="taiwanese">台語口吻</option>
             </select>
 
             <div class="reminder-form">
-                <input type="text" id="reminder-name" placeholder="&#x85E5;&#x540D;&#xFF0C;&#x4F8B;&#x5982;&#x666E;&#x62FF;&#x75BC;">
+                <input type="text" id="reminder-name" placeholder="藥名，例如普拿疼">
                 <input type="time" id="reminder-time">
-                <button id="add-reminder-btn" class="small-btn">&#x65B0;&#x589E;&#x63D0;&#x9192;</button>
+                <button id="add-reminder-btn" class="small-btn">新增提醒</button>
             </div>
-            <p class="helper-text">&#x63D0;&#x9192;&#x6703;&#x5B58;&#x5728;&#x9019;&#x53F0;&#x624B;&#x6A5F;&#x7684;&#x700F;&#x89BD;&#x5668;&#x3002;&#x9801;&#x9762;&#x958B;&#x8457;&#x6642;&#x53EF;&#x4EE5;&#x8DF3;&#x51FA;&#x901A;&#x77E5;&#x3002;</p>
+            <p class="helper-text">提醒會存在這台裝置的瀏覽器。頁面開著時可以跳出通知。</p>
             <div id="reminder-list" class="reminder-list"></div>
         </section>
 
         <footer class="app-footer">
-            <p>2026 AI &#x85E5;&#x54C1;&#x8FA8;&#x8B58;&#x52A9;&#x624B;&#xFF0C;&#x7D50;&#x679C;&#x50C5;&#x4F9B;&#x53C3;&#x8003;&#x3002;</p>
+            <p>2026 AI 藥品辨識助手，結果僅供參考。</p>
         </footer>
 
         <div id="reminder-alert" class="reminder-alert hidden">
             <div>
-                <strong id="reminder-alert-title">&#x7528;&#x85E5;&#x63D0;&#x9192;</strong>
-                <p id="reminder-alert-body">&#x8A72;&#x7528;&#x85E5;&#x4E86;</p>
+                <strong id="reminder-alert-title">用藥提醒</strong>
+                <p id="reminder-alert-body">該用藥了</p>
             </div>
-            <button id="dismiss-reminder-btn" class="dismiss-reminder-btn">&#x77E5;&#x9053;&#x4E86;</button>
+            <button id="dismiss-reminder-btn" class="dismiss-reminder-btn">知道了</button>
         </div>
     </div>
 
-    <script src="app.js?v=17"></script>
+    <script src="app.js?v=18"></script>
 </body>
 </html>
